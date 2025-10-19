@@ -1,151 +1,85 @@
 import streamlit as st
+from datetime import date
+import json
 import pandas as pd
-import math
-from pathlib import Path
+import numpy as np
+st.header("LockerRoom")
+st.write("Welcome to the Beta/Testing Version of LockerRoom! More stuff is coming soon!")
+st.write("How are you feeling today?")
+mood = st.slider(" ", 0, 10)
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
-)
+if mood == 9:
+    st.write("That's great!! Continue to crush the day!!")
+if mood == 5:
+    st.write("I'm sorry to hear that. Keep on pushing forward, tomorrow is a new day.")
+if mood == 0 or mood < 5:
+    st.write("I'm sorry to hear that. Keep on pushing forward, tomorrow is a new day.")
+if mood < 9 and mood > 5:
+ st.write("I'm glad to hear it! Continue on that pace!")
+if mood == 10:
+ st.write("That's great!! Continue to crush the day!!")
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+# Initialize session state for journal entries
+if "journal_entries" not in st.session_state:
+    st.session_state.journal_entries = []
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+# Chat/journal input
+user_input = st.text_area("Write your journal entry here:")
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
-    """
+# Add entry button
+if st.button("Add Entry"):
+    if user_input.strip():  # Only add non-empty input
+        st.session_state.journal_entries.append(user_input.strip())
+        st.success("Entry added!")
+    else:
+        st.warning("Please type something before adding.")
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+# Show all entries
+if st.session_state.journal_entries:
+    st.subheader("Your Journal Entries:")
+    for i, entry in enumerate(st.session_state.journal_entries, start=1):
+        day_label = f"Day {i}"":"
+        st.write(day_label, entry)
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
-
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
+    # Download button
+    st.download_button(
+        label="Download All Entries",
+        data=json.dumps(st.session_state.journal_entries, indent=2),
+        file_name="my_journal.json",
+        mime="application/json"
     )
 
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
-
-    return gdp_df
-
-gdp_df = get_gdp_data()
-
-# -----------------------------------------------------------------------------
-# Draw the actual page
-
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
-
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
+def file_uploaded():
+    uploaded_file = st.file_uploader("Choose a file")
+st.file_uploader("Add some photos to your journal here...", type=None, accept_multiple_files=True, key=None,
+help=None, on_change=None, args=None, kwargs=None, disabled=False, label_visibility="visible", width="stretch")
 
 
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
+page_element="""
+<style>
+[data-testid="stAppViewContainer"]{
+  background-image: url("https://cdn.wallpapersafari.com/88/75/cLUQqJ.jpg");
+  background-size: cover;
+}
+</style>
+"""
 
-st.header(f'GDP in {to_year}', divider='gray')
+st.markdown(page_element, unsafe_allow_html=True)
 
-''
 
-cols = st.columns(4)
+def get_daily_message():
+    today = date.today()
+    messages = {
+        date(2025, 10, 18): "\"If you can dream it, you can do it.\" — Walt Disney",
+        date(2025, 10, 19): "\"I am not a product of my circumstances. I am a product of my decisions.\" — Stephen R. Covey ",
+        date(2025, 10, 20): "\"Stay afraid, but do it anyway. What's important is the action. You don't have to wait to be confident. Just do it and eventually the confidence will follow.\" — Carrie Fisher ",
+        date(2025, 10, 21): "\"The elevator to success is out of order. You'll have to use the stairs, one step at a time.\" — Joe Girard",
+        date(2025, 10, 22): "\"If you look at how long the Earth has been here, we're living in the blink of an eye. So, whatever it is you want to do, you go out and do it.\" - Jamie Foxx"
+    }
+    # Return the message for today, or a default message if not found
+    return messages.get(today, "Welcome to your daily dose of inspiration!")
 
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
+st.header("Daily Quote")
+daily_text = get_daily_message()
+st.write(daily_text)
 
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
-        else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
